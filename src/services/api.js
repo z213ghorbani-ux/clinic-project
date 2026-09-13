@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "/api", // این دقیقاً وصل میشه به پروکسی vite.config
+  baseURL: "http://188.121.114.194:9000/api", // این دقیقاً وصل میشه به پروکسی vite.config
   headers: {
     Accept: "application/json",
   },
