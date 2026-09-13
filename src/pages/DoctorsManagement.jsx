@@ -22,7 +22,7 @@ const normalizeDoctor = (d) => ({
   fullName: d.name || "",
   specialty: d.specialty || "",
   signatureData: d.stamp_path
-    ? `${SERVER_BASE_URL}/storage/${d.stamp_path}`
+    ? `http://localhost:8000/storage/${d.stamp_path}`
     : null,
   createdAt: d.created_at
     ? new Date(d.created_at).toLocaleDateString("fa-IR")
