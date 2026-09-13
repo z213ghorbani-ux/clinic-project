@@ -13,7 +13,8 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:8000", // پورت واقعی بک‌اندتون رو اینجا بذارید
+        //target: "http://127.0.0.1:8000", // پورت واقعی بک‌اندتون رو اینجا بذارید
+        target: "http://188.121.114.194:9000"
         changeOrigin: true,
         secure: false,
       },
