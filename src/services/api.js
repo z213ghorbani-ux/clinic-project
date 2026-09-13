@@ -1,10 +1,9 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:8000/api",
+  baseURL: "/api", // این دقیقاً وصل میشه به پروکسی vite.config
   headers: {
     Accept: "application/json",
-    // Content-Type از اینجا حذف شد — axios خودش بسته به نوع داده تنظیمش می‌کنه
   },
 });
 

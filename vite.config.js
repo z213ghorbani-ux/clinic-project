@@ -13,7 +13,8 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        //target: "http://127.0.0.1:8000", // پورت واقعی بک‌اندتون رو اینجا بذارید
+        // اگر خواستی روی لوکال تست کنی خط پایینی رو کامنت و اینو فعال کن:
+        // target: "http://localhost:8000",
         target: "http://188.121.114.194:9000",
         changeOrigin: true,
         secure: false,
