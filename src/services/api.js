@@ -4,7 +4,7 @@ const api = axios.create({
   baseURL: "http://localhost:8000/api",
   headers: {
     Accept: "application/json",
-    "Content-Type": "application/json",
+    // Content-Type از اینجا حذف شد — axios خودش بسته به نوع داده تنظیمش می‌کنه
   },
 });
 

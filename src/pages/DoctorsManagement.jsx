@@ -8,34 +8,72 @@ import {
   CheckCircle2,
   Users,
   Stethoscope,
-  Sparkles,
+  Loader2,
 } from "lucide-react";
+import api from "@/services/api";
 import Pagination from "@/components/ui/Pagination";
+import { toast } from "sonner";
 
-const STORAGE_KEY = "doctors";
 const PAGE_SIZE = 5;
+
+// نرمال‌سازی داده‌ی پزشک برگشتی از سرور با پشتیبانی از چند فرمت رایج نام‌گذاری
+const normalizeDoctor = (d) => ({
+  id: d.id,
+  fullName: d.name || "",
+  specialty: d.specialty || "",
+  signatureData: d.stamp_path
+    ? `http://localhost:8000/storage/${d.stamp_path}`
+    : null,
+  createdAt: d.created_at
+    ? new Date(d.created_at).toLocaleDateString("fa-IR")
+    : "—",
+});
 
 export default function DoctorsManagement() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
-  const [doctors, setDoctors] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [doctors, setDoctors] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: "",
     specialty: "",
+    medicalCouncilCode: "",
     signature: null,
   });
   const [errors, setErrors] = useState({});
   const [previewUrl, setPreviewUrl] = useState(null);
   const [page, setPage] = useState(1);
 
+  const fetchDoctors = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.get("/doctors");
+      const res = response.data;
+
+      const rawList = Array.isArray(res?.data?.data)
+        ? res.data.data // ← حالت paginate واقعی بک‌اند شما
+        : Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res)
+            ? res
+            : [];
+
+      setDoctors(rawList.map(normalizeDoctor));
+    } catch (error) {
+      console.error("خطا در دریافت لیست پزشکان:", error);
+      toast.error("خطا در دریافت لیست پزشکان از سرور");
+      setDoctors([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(doctors));
-  }, [doctors]);
+    fetchDoctors();
+  }, []);
 
   const totalPages = Math.max(1, Math.ceil(doctors.length / PAGE_SIZE));
   const pageDoctors = useMemo(
@@ -81,12 +119,14 @@ export default function DoctorsManagement() {
     const newErrors = {};
     if (!formData.fullName.trim()) newErrors.fullName = "نام پزشک الزامی است";
     if (!formData.specialty.trim()) newErrors.specialty = "تخصص الزامی است";
+    if (!formData.medicalCouncilCode.trim())
+      newErrors.medicalCouncilCode = "کد نظام پزشکی الزامی است";
     if (!formData.signature)
       newErrors.signature = "آپلود مهر و امضا الزامی است";
     return newErrors;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const newErrors = validate();
     if (Object.keys(newErrors).length > 0) {
@@ -94,27 +134,53 @@ export default function DoctorsManagement() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const newDoctor = {
-        id: Date.now(),
-        fullName: formData.fullName.trim(),
-        specialty: formData.specialty.trim(),
-        signatureData: ev.target.result,
-        createdAt: new Date().toLocaleDateString("fa-IR"),
-      };
-      setDoctors((prev) => [newDoctor, ...prev]);
-      setFormData({ fullName: "", specialty: "", signature: null });
+    setIsSubmitting(true);
+    try {
+      const payload = new FormData();
+      payload.append("name", formData.fullName.trim());
+      payload.append("specialty", formData.specialty.trim());
+      payload.append(
+        "medical_council_code",
+        formData.medicalCouncilCode.trim(),
+      );
+      payload.append("stamp", formData.signature); // به جای "signature"
+
+      await api.post("/doctors", payload); // بدون هدر دستی Content-Type
+
+      toast.success("پزشک با موفقیت ثبت شد");
+      setFormData({
+        fullName: "",
+        specialty: "",
+        medicalCouncilCode: "",
+        signature: null,
+      });
       setPreviewUrl(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       setPage(1);
-    };
-    reader.readAsDataURL(formData.signature);
+      fetchDoctors();
+    } catch (error) {
+      console.error("خطای ثبت پزشک:", error);
+      const serverMessage =
+        error.response?.data?.message ||
+        error.response?.data?.errors?.full_name?.[0] ||
+        error.response?.data?.errors?.specialty?.[0] ||
+        error.response?.data?.errors?.signature?.[0];
+      toast.error(serverMessage || "خطا در ثبت پزشک");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm("آیا از حذف این پزشک مطمئن هستید؟")) {
+  const handleDelete = async (id) => {
+    if (!window.confirm("آیا از حذف این پزشک مطمئن هستید؟")) return;
+
+    try {
+      await api.delete(`/doctors/${id}`);
       setDoctors((prev) => prev.filter((d) => d.id !== id));
+      toast.success("پزشک حذف شد");
+    } catch (error) {
+      console.error("خطای حذف پزشک:", error);
+      toast.error("خطا در حذف پزشک");
     }
   };
 
@@ -174,6 +240,7 @@ export default function DoctorsManagement() {
                   value={formData.fullName}
                   onChange={handleChange}
                   placeholder="مثال: دکتر علی قربانی"
+                  disabled={isSubmitting}
                   className={`w-full px-3.5 py-2 text-sm bg-slate-50 border rounded-xl outline-none focus:bg-white focus:border-blue-500 transition-all ${
                     errors.fullName
                       ? "border-red-400 bg-red-50/20"
@@ -197,6 +264,7 @@ export default function DoctorsManagement() {
                   value={formData.specialty}
                   onChange={handleChange}
                   placeholder="مثال: متخصص قلب و عروق"
+                  disabled={isSubmitting}
                   className={`w-full px-3.5 py-2 text-sm bg-slate-50 border rounded-xl outline-none focus:bg-white focus:border-blue-500 transition-all ${
                     errors.specialty
                       ? "border-red-400 bg-red-50/20"
@@ -209,7 +277,29 @@ export default function DoctorsManagement() {
                   </p>
                 )}
               </div>
-
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                  کد نظام پزشکی <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="medicalCouncilCode"
+                  value={formData.medicalCouncilCode}
+                  onChange={handleChange}
+                  placeholder="مثال: 123456"
+                  disabled={isSubmitting}
+                  className={`w-full px-3.5 py-2 text-sm bg-slate-50 border rounded-xl outline-none focus:bg-white focus:border-blue-500 transition-all ${
+                    errors.medicalCouncilCode
+                      ? "border-red-400 bg-red-50/20"
+                      : "border-slate-200"
+                  }`}
+                />
+                {errors.medicalCouncilCode && (
+                  <p className="text-[11px] text-red-500 mt-1">
+                    {errors.medicalCouncilCode}
+                  </p>
+                )}
+              </div>
               {/* آپلودر سفارشی به جای فایل اینپوت زشت پیش‌فرض */}
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1.5">
@@ -221,6 +311,7 @@ export default function DoctorsManagement() {
                   id="doctor-signature"
                   accept="image/png, image/jpeg, image/jpg"
                   onChange={handleFileChange}
+                  disabled={isSubmitting}
                   className="hidden"
                 />
                 <label
@@ -268,9 +359,11 @@ export default function DoctorsManagement() {
 
               <button
                 type="submit"
-                className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white text-sm font-semibold rounded-xl transition-all shadow-md shadow-blue-500/25 mt-2"
+                disabled={isSubmitting}
+                className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white text-sm font-semibold rounded-xl transition-all shadow-md shadow-blue-500/25 mt-2 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                ثبت پزشک
+                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isSubmitting ? "در حال ثبت..." : "ثبت پزشک"}
               </button>
             </form>
           </div>
@@ -289,7 +382,14 @@ export default function DoctorsManagement() {
               </span>
             </div>
 
-            {doctors.length === 0 ? (
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                <Loader2 className="w-6 h-6 text-blue-500 animate-spin mb-3" />
+                <p className="text-sm font-medium text-slate-500">
+                  در حال دریافت لیست پزشکان...
+                </p>
+              </div>
+            ) : doctors.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
                 <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mb-3">
                   <Stethoscope className="w-6 h-6" />

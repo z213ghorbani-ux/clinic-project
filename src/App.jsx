@@ -4,6 +4,11 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DoctorsManagement from "./pages/DoctorsManagement";
+import PatientsManagement from "./pages/PatientsManagement";
+import SecretariesManagement from "@/pages/SecretariesManagement";
+import LabResultsManagement from "./pages/LabResultsManagement";
+import ArchivesManagement from "./pages/ArchivesManagement";
+import ReportsManagement from "./pages/ReportsManagement";
 
 export default function App() {
   // وضعیت اولیه از localStorage خوانده می‌شود تا بعد از رفرش هم لاگین بماند
@@ -52,6 +57,46 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/patients"
+          element={
+            <ProtectedRoute>
+              <PatientsManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/secretaries"
+          element={
+            <ProtectedRoute>
+              <SecretariesManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/results"
+          element={
+            <ProtectedRoute>
+              <LabResultsManagement />
+            </ProtectedRoute>
+          }
+        />
+         <Route
+          path="/archive"
+          element={
+            <ProtectedRoute>
+              <ArchivesManagement />
+            </ProtectedRoute>
+          }
+          />
+          <Route
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <ReportsManagement />
+            </ProtectedRoute>
+          }
+          />
       </Routes>
     </BrowserRouter>
   );

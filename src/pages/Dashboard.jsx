@@ -166,7 +166,7 @@ export default function Dashboard({ onLogout }) {
                 <ChevronLeft className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-800 mb-1 group-hover:text-blue-600 transition-colors">
+                <h3 className="text-sm font-bold text-slate-800 mb-1 group-hover:text-indigo-600 transition-colors">
                   مدیریت منشی‌ها
                 </h3>
                 <p className="text-xs text-slate-400 leading-relaxed line-clamp-1">
@@ -243,7 +243,7 @@ export default function Dashboard({ onLogout }) {
                      پرونده ها مشخصات بیمار
                   </p>
                   <button
-                    onClick={() => navigate("/patients/new")}
+                    onClick={() => navigate("/Patients")}
                     className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-xs transition-colors"
                   >
                     <span>مشاهده اطلاعات</span>
