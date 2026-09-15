@@ -363,6 +363,167 @@ export default function LabResultsManagement() {
       setIsSubmitting(false);
     }
   };
+  // صدور جوابدهی و چاپ لیست نهایی
+  const handleExportResult = () => {
+    if (!Array.isArray(finalRecords) || finalRecords.length === 0) {
+      toast.warning("هنوز هیچ پرونده‌ای برای صدور جوابدهی ثبت نشده است");
+      return;
+    }
+
+    try {
+      const printWindow = window.open("", "_blank", "width=1000,height=800");
+
+      if (!printWindow) {
+        toast.error(
+          "پنجره چاپ باز نشد. لطفاً اجازه باز شدن پنجره‌های جدید را فعال کنید.",
+        );
+        return;
+      }
+
+      const rows = finalRecords
+        .map(
+          (record, index) => `
+            <tr>
+              <td>${index + 1}</td>
+              <td>${record.patientName || "-"}</td>
+              <td>${record.patientNationalId || "-"}</td>
+              <td>${record.doctors || "-"}</td>
+              <td>${record.date || "-"}</td>
+              <td>${record.time || "-"}</td>
+              <td>${record.hasInvoice ? "فاکتور دارد" : "بدون فاکتور"}</td>
+            </tr>
+          `,
+        )
+        .join("");
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="fa" dir="rtl">
+          <head>
+            <meta charset="UTF-8" />
+            <title>گزارش جوابدهی کلینیک</title>
+
+            <style>
+              * {
+                box-sizing: border-box;
+              }
+
+              body {
+                direction: rtl;
+                font-family: Tahoma, Arial, sans-serif;
+                padding: 30px;
+                color: #1e293b;
+                background: #ffffff;
+              }
+
+              h1 {
+                text-align: center;
+                margin-bottom: 8px;
+                font-size: 22px;
+              }
+
+              .date {
+                text-align: center;
+                color: #64748b;
+                margin-bottom: 24px;
+                font-size: 13px;
+              }
+
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
+              }
+
+              th,
+              td {
+                border: 1px solid #cbd5e1;
+                padding: 10px 8px;
+                text-align: center;
+                font-size: 12px;
+              }
+
+              th {
+                background: #e2e8f0;
+                font-weight: bold;
+              }
+
+              tr:nth-child(even) {
+                background: #f8fafc;
+              }
+
+              .footer {
+                margin-top: 30px;
+                display: flex;
+                justify-content: space-between;
+                font-size: 12px;
+                color: #475569;
+              }
+
+              @media print {
+                body {
+                  padding: 10px;
+                }
+
+                button {
+                  display: none;
+                }
+              }
+            </style>
+          </head>
+
+          <body>
+            <h1>گزارش جوابدهی کلینیک</h1>
+
+            <div class="date">
+              تاریخ صدور:
+              ${new Date().toLocaleDateString("fa-IR")}
+              -
+              ساعت:
+              ${new Date().toLocaleTimeString("fa-IR")}
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>ردیف</th>
+                  <th>نام بیمار</th>
+                  <th>کد ملی</th>
+                  <th>پزشک معالج</th>
+                  <th>تاریخ ثبت</th>
+                  <th>ساعت ثبت</th>
+                  <th>وضعیت فاکتور</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+
+            <div class="footer">
+              <span>تعداد پرونده‌ها: ${finalRecords.length}</span>
+              <span>امضا و مهر مرکز درمانی: ........................</span>
+            </div>
+
+            <script>
+              window.onload = function () {
+                window.focus();
+                window.print();
+              };
+            </script>
+          </body>
+        </html>
+      `);
+
+      printWindow.document.close();
+
+      toast.success("گزارش جوابدهی آماده چاپ شد");
+    } catch (error) {
+      console.error("خطا در صدور جوابدهی:", error);
+      toast.error("خطا در آماده‌سازی گزارش جوابدهی");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 text-slate-900" dir="rtl">
