@@ -70,42 +70,47 @@ export default function ReportsManagement() {
     async (page = 1) => {
       setLoading(true);
       try {
-        const response = await reportService.getReports({
+        const result = await reportService.getReports({
           page,
           search: searchTerm,
           from_date: fromDate,
           to_date: toDate,
         });
 
-        // برای بررسی دقیق خروجی در کنسول مرورگر
-        console.log("پاسخ سرور برای گزارش‌ها:", response);
+        console.log("پاسخ سرور برای گزارش‌ها:", result);
 
         let list = [];
         let currentPage = 1;
         let lastPage = 1;
         let totalRecords = 0;
 
-        // استخراج هوشمند بر اساس انواع خروجی‌های لاراول
-        if (Array.isArray(response)) {
-          list = response;
-          totalRecords = response.length;
-        } else if (response?.data?.data && Array.isArray(response.data.data)) {
-          // خروجی استاندارد Resource لاراول با استاتوس
-          list = response.data.data;
-          currentPage = response.data.current_page || 1;
-          lastPage = response.data.last_page || 1;
-          totalRecords = response.data.total || 0;
-        } else if (response?.data && Array.isArray(response.data)) {
-          // خروجی مستقیم Paginate لاراول
-          list = response.data;
-          currentPage = response.current_page || 1;
-          lastPage = response.last_page || 1;
-          totalRecords = response.total || response.data.length;
-        } else if (response?.reports) {
-          list = Array.isArray(response.reports)
-            ? response.reports
-            : response.reports.data || [];
-          totalRecords = response.reports.total || list.length;
+        // سناریو ۱: اگر پاسخ مستقیم یک آرایه باشد
+        if (Array.isArray(result)) {
+          list = result;
+          totalRecords = result.length;
+        }
+        // سناریو ۲: پاسخ استاندارد لاراول با متد paginate (دارای data داخل خودش)
+        else if (result?.data && Array.isArray(result.data)) {
+          list = result.data;
+          currentPage = result.current_page || 1;
+          lastPage = result.last_page || 1;
+          totalRecords = result.total ?? result.data.length;
+        }
+        // سناریو ۳: ساختار تو در تو { status: "success", data: { data: [...], current_page: 1 } }
+        else if (result?.data?.data && Array.isArray(result.data.data)) {
+          list = result.data.data;
+          currentPage = result.data.current_page || 1;
+          lastPage = result.data.last_page || 1;
+          totalRecords = result.data.total ?? list.length;
+        }
+        // سناریو ۴: ساختار دارای کلید reports
+        else if (result?.reports) {
+          list = Array.isArray(result.reports)
+            ? result.reports
+            : result.reports.data || [];
+          totalRecords = result.reports.total || list.length;
+          currentPage = result.reports.current_page || 1;
+          lastPage = result.reports.last_page || 1;
         }
 
         setReports(list);
@@ -122,17 +127,6 @@ export default function ReportsManagement() {
     },
     [searchTerm, fromDate, toDate],
   );
-
-  useEffect(() => {
-    fetchReports(pagination.currentPage);
-  }, [pagination.currentPage]);
-
-  // اعمال سرچ و فیلتر
-  const handleSearch = (e) => {
-    if (e) e.preventDefault();
-    setPagination((prev) => ({ ...prev, currentPage: 1 }));
-    fetchReports(1);
-  };
 
   // ریست کردن فیلترها
   const handleResetFilters = () => {
