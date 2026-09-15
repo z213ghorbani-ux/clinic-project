@@ -69,58 +69,87 @@ export default function ReportsManagement() {
   const fetchReports = useCallback(
     async (page = 1) => {
       setLoading(true);
+
       try {
-        const result = await reportService.getReports({
-          page,
+        const response = await reportService.getReports({
+          page: page,
           search: searchTerm,
           from_date: fromDate,
           to_date: toDate,
         });
 
-        console.log("پاسخ سرور برای گزارش‌ها:", result);
+        console.log("پاسخ سرور برای گزارش‌ها:", response);
 
         let list = [];
         let currentPage = 1;
         let lastPage = 1;
         let totalRecords = 0;
 
-        // سناریو ۱: اگر پاسخ مستقیم یک آرایه باشد
-        if (Array.isArray(result)) {
-          list = result;
-          totalRecords = result.length;
+        // حالت اول: پاسخ مستقیم به‌صورت آرایه
+        if (Array.isArray(response)) {
+          list = response;
+          totalRecords = response.length;
         }
-        // سناریو ۲: پاسخ استاندارد لاراول با متد paginate (دارای data داخل خودش)
-        else if (result?.data && Array.isArray(result.data)) {
-          list = result.data;
-          currentPage = result.current_page || 1;
-          lastPage = result.last_page || 1;
-          totalRecords = result.total ?? result.data.length;
+
+        // حالت دوم:
+        // { status: "success", data: { data: [...], current_page, ... } }
+        else if (Array.isArray(response?.data?.data)) {
+          list = response.data.data;
+          currentPage = response.data.current_page ?? 1;
+          lastPage = response.data.last_page ?? 1;
+          totalRecords = response.data.total ?? list.length;
         }
-        // سناریو ۳: ساختار تو در تو { status: "success", data: { data: [...], current_page: 1 } }
-        else if (result?.data?.data && Array.isArray(result.data.data)) {
-          list = result.data.data;
-          currentPage = result.data.current_page || 1;
-          lastPage = result.data.last_page || 1;
-          totalRecords = result.data.total ?? list.length;
+
+        // حالت سوم:
+        // { data: [...], current_page, last_page, total }
+        else if (Array.isArray(response?.data)) {
+          list = response.data;
+          currentPage = response.current_page ?? 1;
+          lastPage = response.last_page ?? 1;
+          totalRecords = response.total ?? list.length;
         }
-        // سناریو ۴: ساختار دارای کلید reports
-        else if (result?.reports) {
-          list = Array.isArray(result.reports)
-            ? result.reports
-            : result.reports.data || [];
-          totalRecords = result.reports.total || list.length;
-          currentPage = result.reports.current_page || 1;
-          lastPage = result.reports.last_page || 1;
+
+        // حالت چهارم:
+        // { reports: [...] }
+        else if (Array.isArray(response?.reports)) {
+          list = response.reports;
+          totalRecords = list.length;
+        }
+
+        // حالت پنجم:
+        // { reports: { data: [...], current_page, ... } }
+        else if (Array.isArray(response?.reports?.data)) {
+          list = response.reports.data;
+          currentPage = response.reports.current_page ?? 1;
+          lastPage = response.reports.last_page ?? 1;
+          totalRecords = response.reports.total ?? list.length;
+        }
+
+        // ساختار پاسخ ناشناخته
+        else {
+          console.warn("ساختار پاسخ گزارش‌ها شناخته نشد:", response);
         }
 
         setReports(list);
+
         setPagination({
-          currentPage,
-          lastPage,
+          currentPage: currentPage,
+          lastPage: lastPage,
           total: totalRecords,
         });
       } catch (error) {
-        console.error("خطا در دریافت گزارش‌ها:", error);
+        console.error(
+          "خطا در دریافت گزارش‌ها:",
+          error?.response?.data || error,
+        );
+
+        setReports([]);
+
+        setPagination({
+          currentPage: 1,
+          lastPage: 1,
+          total: 0,
+        });
       } finally {
         setLoading(false);
       }
@@ -128,24 +157,36 @@ export default function ReportsManagement() {
     [searchTerm, fromDate, toDate],
   );
 
-  // ریست کردن فیلترها
+  useEffect(() => {
+    fetchReports(pagination.currentPage);
+  }, [pagination.currentPage, fetchReports]);
+
+  // اعمال جستجو و فیلترها
+  const handleSearch = (event) => {
+    if (event) {
+      event.preventDefault();
+    }
+
+    if (pagination.currentPage === 1) {
+      fetchReports(1);
+    } else {
+      setPagination((previousPagination) => ({
+        ...previousPagination,
+        currentPage: 1,
+      }));
+    }
+  };
+
+  // پاک کردن فیلترها
   const handleResetFilters = () => {
     setSearchTerm("");
     setFromDate("");
     setToDate("");
-    setPagination((prev) => ({ ...prev, currentPage: 1 }));
-    setTimeout(() => {
-      reportService.getReports({ page: 1 }).then((res) => {
-        if (res.status === "success" && res.data) {
-          setReports(res.data.data || []);
-          setPagination({
-            currentPage: res.data.current_page || 1,
-            lastPage: res.data.last_page || 1,
-            total: res.data.total || 0,
-          });
-        }
-      });
-    }, 50);
+
+    setPagination((previousPagination) => ({
+      ...previousPagination,
+      currentPage: 1,
+    }));
   };
 
   // حذف گروهی
