@@ -260,7 +260,6 @@ export default function LabResultsManagement() {
     try {
       setIsSubmitting(true);
 
-      // بیمار اصلی (از اولین آیتم صف یا بیمار انتخاب‌شده)
       const primaryPatient = temporaryQueue[0].patient;
       const patientName =
         primaryPatient.full_name ||
@@ -272,6 +271,7 @@ export default function LabResultsManagement() {
         "0000000000";
 
       const formData = new FormData();
+      formData.append("patient_id", primaryPatient.id || "");
       formData.append("patient_name", patientName);
       formData.append("national_code", nationalCode);
       formData.append("file_number", primaryPatient.file_number || "");
@@ -281,28 +281,32 @@ export default function LabResultsManagement() {
       );
       formData.append("issued_at", new Date().toISOString().split("T")[0]);
 
-      // آماده‌سازی داده‌های فرم و فایل‌ها
+      // آماده‌سازی تمام خدمات و پزشکان
       const allServices = [];
+      let fileIndex = 0;
+
       temporaryQueue.forEach((queueItem) => {
         queueItem.services.forEach((s) => {
-          allServices.push({
+          const serviceItem = {
             serviceId: s.serviceId,
             serviceTitle:
               s.serviceId === "other" ? s.customName || "سایر" : s.serviceTitle,
             doctorName:
               queueItem.doctor?.name || queueItem.doctor?.full_name || "نامشخص",
             doctorId: queueItem.doctor?.id || null,
-          });
+          };
+          allServices.push(serviceItem);
 
           if (s.file) {
-            formData.append("files[]", s.file);
+            formData.append(`files[${fileIndex}]`, s.file);
+            fileIndex++;
           }
         });
       });
 
       const payloadData = {
         hasInvoice: invoiceCreated,
-        invoiceDetails: invoiceData, // ذخیره کامل جزئیات قیمت و تخفیف
+        invoiceDetails: invoiceData,
         services: allServices,
         totalItemsCount: allServices.length,
         submittedAt: new Date().toISOString(),
@@ -310,8 +314,12 @@ export default function LabResultsManagement() {
 
       formData.append("form_data", JSON.stringify(payloadData));
 
-      // ارسال درخواست به اندپوینت بایگانی
-      const response = await api.post("/archives", formData);
+      // ارسال به بک‌اند
+      const response = await api.post("/archives", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       const uniqueDoctors = Array.from(
         new Set(
@@ -334,12 +342,13 @@ export default function LabResultsManagement() {
         hasInvoice: invoiceCreated,
       };
 
-      setFinalRecords([...finalRecords, newFinalRecord]);
+      setFinalRecords((prev) => [...prev, newFinalRecord]);
       setTemporaryQueue([]);
       setSelectedPatient(null);
       setPatientSearch("");
       setSelectedDoctorId("");
       setInvoiceCreated(false);
+      setInvoiceData(null);
 
       toast.success(
         response.data?.message || "پرونده جوابدهی با موفقیت در سیستم ثبت شد",
@@ -353,14 +362,6 @@ export default function LabResultsManagement() {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleExportResult = () => {
-    if (finalRecords.length === 0) {
-      toast.warning("رکوردی برای صدور جوابدهی انتخاب نشده است");
-      return;
-    }
-    toast.success("درخواست صدور جوابدهی ارسال شد");
   };
 
   return (
