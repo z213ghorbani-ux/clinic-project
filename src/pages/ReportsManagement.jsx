@@ -36,7 +36,7 @@ import {
 
 // کامپوننت تقویم شمسی پروژه و سرویس API
 import { PersianDatePicker } from "@/components/ui/persian-datepicker";
-import { reportService } from "@/services/reportService";
+import reportService from "@/services/reportService";
 
 export default function ReportsManagement() {
   const navigate = useNavigate();
