@@ -1,28 +1,32 @@
 import api from "./api";
 
-export const reportService = {
-  getReports: async (params = {}) => {
+const reportService = {
+  async getReports(params = {}) {
     const response = await api.get("/reports", {
       params,
     });
     return response.data;
   },
 
-  batchDeleteReports: async (fromDateOrPayload, toDate) => {
-    let payload = {};
-    if (typeof fromDateOrPayload === "object" && fromDateOrPayload !== null) {
-      payload = {
-        from_date: fromDateOrPayload.fromDate || fromDateOrPayload.from_date,
-        to_date: fromDateOrPayload.toDate || fromDateOrPayload.to_date,
-      };
-    } else {
-      payload = {
-        from_date: fromDateOrPayload,
-        to_date: toDate,
-      };
-    }
+  async batchDeleteReports(fromDateOrObject, maybeToDate) {
+    const payload =
+      typeof fromDateOrObject === "object" && fromDateOrObject !== null
+        ? {
+            from_date:
+              fromDateOrObject.from_date ?? fromDateOrObject.fromDate ?? "",
+            to_date: fromDateOrObject.to_date ?? fromDateOrObject.toDate ?? "",
+          }
+        : {
+            from_date: fromDateOrObject,
+            to_date: maybeToDate,
+          };
 
-    const response = await api.post("/reports/batch-delete", payload);
+    const response = await api.delete("/reports/batch-delete", {
+      data: payload,
+    });
+
     return response.data;
   },
 };
+
+export default reportService;

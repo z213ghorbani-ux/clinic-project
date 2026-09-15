@@ -1,27 +1,29 @@
-import api from "./api";
+import axios from "axios";
 
-export const getReports = async (params = {}) => {
-  const response = await api.get("/reports", {
-    params,
-  });
+const api = axios.create({
+  baseURL: "http://188.121.114.194:9000/api",
+  headers: {
+    Accept: "application/json",
+  },
+});
 
-  return response.data;
-};
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
-export const batchDeleteReports = async (fromDateOrObject, maybeToDate) => {
-  const payload =
-    typeof fromDateOrObject === "object" && fromDateOrObject !== null
-      ? {
-          from_date:
-            fromDateOrObject.from_date ?? fromDateOrObject.fromDate ?? "",
-          to_date: fromDateOrObject.to_date ?? fromDateOrObject.toDate ?? "",
-        }
-      : {
-          from_date: fromDateOrObject,
-          to_date: maybeToDate,
-        };
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+    }
+    return Promise.reject(error);
+  },
+);
 
-  const response = await api.post("/reports/batch-delete", payload);
-
-  return response.data;
-};
+export default api;
