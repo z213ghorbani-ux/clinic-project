@@ -156,7 +156,19 @@ export default function ArchivesManagement() {
       return [];
     }
   };
+  const formatFaDateTime = (v) => {
+    if (!v) return "—";
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return String(v);
 
+    return new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(d);
+  };
   return (
     <TooltipProvider delayDuration={200}>
       <div className="p-6 space-y-6" dir="rtl">
@@ -311,7 +323,7 @@ export default function ArchivesManagement() {
                           {item.issued_by_name || item.issuer?.name || "—"}
                         </TableCell>
                         <TableCell className="text-center font-mono text-xs text-slate-500">
-                          {item.issued_at || item.created_at || "—"}
+                          {formatFaDateTime(item.issued_at || item.created_at)}
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-2">
@@ -422,7 +434,9 @@ export default function ArchivesManagement() {
                 </p>
                 <p>
                   <b>تاریخ صدور:</b>{" "}
-                  {detailItem.issued_at || detailItem.created_at || "—"}
+                  {formatFaDateTime(
+                    detailItem.issued_at || detailItem.created_at,
+                  )}
                 </p>
               </div>
 
