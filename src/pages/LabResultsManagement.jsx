@@ -74,7 +74,7 @@ export default function LabResultsManagement() {
   const [invoiceCreated, setInvoiceCreated] = useState(false);
   const [finalRecords, setFinalRecords] = useState([]);
 
-  //---------------
+  // مودال فاکتور
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [invoiceData, setInvoiceData] = useState(null);
 
@@ -218,6 +218,7 @@ export default function LabResultsManagement() {
       tempId: Date.now(),
       patient: selectedPatient,
       doctor: doctor,
+      doctorId: doctor?.id || selectedDoctorId,
       services: [...selectedServices],
       createdAt: new Date().toLocaleTimeString("fa-IR"),
     };
@@ -281,11 +282,12 @@ export default function LabResultsManagement() {
       );
       formData.append("issued_at", new Date().toISOString().split("T")[0]);
 
-      // آماده‌سازی تمام خدمات و پزشکان
+      // آماده‌سازی تمام خدمات و الصاق فایل‌ها همراه با شناسه‌ی پزشک همان فایل
       const allServices = [];
-      let fileIndex = 0;
 
       temporaryQueue.forEach((queueItem) => {
+        const itemDoctorId = queueItem.doctor?.id || queueItem.doctorId || "";
+
         queueItem.services.forEach((s) => {
           const serviceItem = {
             serviceId: s.serviceId,
@@ -293,13 +295,14 @@ export default function LabResultsManagement() {
               s.serviceId === "other" ? s.customName || "سایر" : s.serviceTitle,
             doctorName:
               queueItem.doctor?.name || queueItem.doctor?.full_name || "نامشخص",
-            doctorId: queueItem.doctor?.id || null,
+            doctorId: itemDoctorId,
           };
           allServices.push(serviceItem);
 
+          // ارسال فایل و اتصال آن به پزشک مربوطه
           if (s.file) {
-            formData.append(`files[${fileIndex}]`, s.file);
-            fileIndex++;
+            formData.append("files[]", s.file);
+            formData.append("file_doctors[]", itemDoctorId);
           }
         });
       });
@@ -363,6 +366,7 @@ export default function LabResultsManagement() {
       setIsSubmitting(false);
     }
   };
+
   // صدور جوابدهی و چاپ لیست نهایی
   const handleExportResult = () => {
     if (!Array.isArray(finalRecords) || finalRecords.length === 0) {
@@ -683,6 +687,7 @@ export default function LabResultsManagement() {
                       (d) => String(d.id) === String(selectedDoctorId),
                     );
                     const hasSig =
+                      doc?.stamp_path ||
                       doc?.signature ||
                       doc?.signature_url ||
                       doc?.signature_path;
@@ -691,8 +696,8 @@ export default function LabResultsManagement() {
                         className={`text-xs mt-1 ${hasSig ? "text-emerald-600" : "text-amber-600"}`}
                       >
                         {hasSig
-                          ? "✓ امضای ثبت‌شده پزشک ضمیمه خواهد شد."
-                          : "⚠ پزشک امضای ثبت‌شده در سیستم ندارد."}
+                          ? "✓ مهر و امضای ثبت‌شده پزشک ضمیمه خواهد شد."
+                          : "⚠ پزشک مهر یا امضای ثبت‌شده در سیستم ندارد."}
                       </p>
                     );
                   })()}
