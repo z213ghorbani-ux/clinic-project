@@ -158,6 +158,7 @@ export default function ArchivesManagement() {
   };
   const formatFaDateTime = (v) => {
     if (!v) return "—";
+
     const d = new Date(v);
     if (isNaN(d.getTime())) return String(v);
 
@@ -169,6 +170,7 @@ export default function ArchivesManagement() {
       minute: "2-digit",
     }).format(d);
   };
+
   return (
     <TooltipProvider delayDuration={200}>
       <div className="p-6 space-y-6" dir="rtl">
@@ -437,6 +439,7 @@ export default function ArchivesManagement() {
                   {formatFaDateTime(
                     detailItem.issued_at || detailItem.created_at,
                   )}
+                  {formatFaDateTime(detailItem.issued_at)}
                 </p>
               </div>
 
