@@ -16,17 +16,39 @@ import { toast } from "sonner";
 
 const PAGE_SIZE = 5;
 
-// نرمال‌سازی داده‌ی پزشک برگشتی از سرور با پشتیبانی از چند فرمت رایج نام‌گذاری
-const normalizeDoctor = (d) => ({
-  id: d.id,
-  fullName: d.name || "",
-  specialty: d.specialty || "",
-  signatureData: d.stamp_path
-    ? `http://localhost:8000/storage/${d.stamp_path}`
-    : null,
-  createdAt: d.created_at
-    ? new Date(d.created_at).toLocaleDateString("fa-IR")
-    : "—",
+const STORAGE_BASE_URL = "http://localhost:8000";
+
+const getImageUrl = (path) => {
+  if (!path) return null;
+
+  let value = String(path).trim().replaceAll("\\", "/");
+
+  // اگر URL کامل از بک‌اند برگشته باشد، همان را نگه می‌داریم.
+  if (value.startsWith("http://") || value.startsWith("https://")) {
+    return value.replaceAll("/storage//", "/storage/");
+  }
+
+  // حذف اسلش‌های ابتدایی
+  while (value.startsWith("/")) {
+    value = value.slice(1);
+  }
+
+  // حذف storage/ تکراری از ابتدای مسیر
+  while (value.startsWith("storage/")) {
+    value = value.slice("storage/".length);
+  }
+
+  return `${STORAGE_BASE_URL}/storage/${value}`;
+};
+
+const normalizeDoctor = (doctor) => ({
+  id: doctor.id,
+  fullName: doctor.name || "",
+  specialty: doctor.specialty || "",
+  signatureData: getImageUrl(doctor.stamp_url || doctor.stamp_path),
+  createdAt: doctor.created_at
+    ? new Date(doctor.created_at).toLocaleDateString("fa-IR")
+    : "-",
 });
 
 export default function DoctorsManagement() {
